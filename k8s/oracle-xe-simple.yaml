@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oracle-xe
+  labels:
+    app: oracle-xe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oracle-xe
+  template:
+    metadata:
+      labels:
+        app: oracle-xe
+    spec:
+      securityContext:
+        runAsUser: 54321
+        runAsGroup: 54321
+        fsGroup: 54321
+      containers:
+      - name: oracle-xe
+        image: gvenzl/oracle-xe:21-slim-faststart
+        ports:
+        - containerPort: 1521
+        env:
+        - name: ORACLE_PASSWORD
+          value: "Oracle123!"
+        - name: APP_USER
+          value: "capacityuser"
+        - name: APP_USER_PASSWORD
+          value: "CapacityPass123!"
+        - name: ORACLE_CHARACTERSET
+          value: "AL32UTF8"
+        - name: INIT_SGA_SIZE
+          value: "512"
+        - name: INIT_PGA_SIZE
+          value: "256"
+        resources:
+          requests:
+            memory: "1.5Gi"
+            cpu: "500m"
+          limits:
+            memory: "3Gi"
+            cpu: "1500m"
+        volumeMounts:
+        - name: oracle-data
+          mountPath: /opt/oracle/oradata
+        livenessProbe:
+          tcpSocket:
+            port: 1521
+          initialDelaySeconds: 120
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 1521
+          initialDelaySeconds: 60
+          periodSeconds: 10
+      volumes:
+      - name: oracle-data
+        emptyDir:
+          sizeLimit: 8Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle-xe-service
+spec:
+  selector:
+    app: oracle-xe
+  ports:
+  - protocol: TCP
+    port: 1521
+    targetPort: 1521
+    nodePort: 31521
+  type: NodePort

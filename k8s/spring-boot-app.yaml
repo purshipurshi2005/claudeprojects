@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-consumer-app
+  labels:
+    app: kafka-consumer-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-consumer-app
+  template:
+    metadata:
+      labels:
+        app: kafka-consumer-app
+    spec:
+      containers:
+      - name: kafka-consumer-app
+        image: kafka-consumer-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_USERNAME
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "password"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/messages/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/messages/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-consumer-app-service
+spec:
+  selector:
+    app: kafka-consumer-app
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    nodePort: 30080
+  type: NodePort
